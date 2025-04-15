@@ -1,1 +1,1 @@
-# python_chat_translator
+# python_game_chat_translator
