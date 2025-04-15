@@ -5,6 +5,8 @@ import pytesseract
 from googletrans import Translator
 import tkinter as tk
 import threading
+import keyboard
+import time
 
 # Tesseractのパス (必要なら指定)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -65,18 +67,46 @@ class ChatTranslator:
             self.last_text = text
             return "\n".join(output_lines)
 
-# 定期監視ループ
-def loop(translator):
-    translated_text = translator.capture_and_translate()
-    if translated_text:
-        label.config(text=translated_text)
-    root.after(1000, loop, translator)  # 1秒ごとにチェック（必要なら調整）
+# 実行制御用フラグ
+loop_running = False
 
-def start():
-    translator = ChatTranslator()
-    loop(translator)
+translator = ChatTranslator()
+
+# 定期監視ループ
+def translation_loop():
+    global loop_running
+
+    while True:
+        if loop_running:
+            translated_text = translator.capture_and_translate()
+            if translated_text:
+                label.config(text=translated_text)
+        time.sleep(1.0)  # 翻訳間隔
+
+# キー監視
+def keyboard_watcher():
+    global loop_running
+
+    while True:
+        if keyboard.is_pressed('ctrl+f1'):
+            loop_running = True
+            label.config(text="翻訳ループ実行中...")
+
+        elif keyboard.is_pressed('ctrl+f2'):
+            loop_running = False
+            label.config(text="翻訳停止中")
+
+        elif keyboard.is_pressed('ctrl+shift+z'):
+            translated_text = translator.capture_and_translate()
+            if translated_text:
+                label.config(text="ワンショット翻訳実行\n" + translated_text)
+            else:
+                label.config(text="ワンショット翻訳実行 (チャット未検出)")
+
+        time.sleep(0.1)
 
 # スレッドで開始
-threading.Thread(target=start, daemon=True).start()
+threading.Thread(target=translation_loop, daemon=True).start()
+threading.Thread(target=keyboard_watcher, daemon=True).start()
 
 root.mainloop()
